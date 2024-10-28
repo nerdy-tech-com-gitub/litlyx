@@ -1,43 +1,38 @@
-ARG NODE_VERSION=21
+# Start with a minimal Node.js base image
+FROM node:21-alpine as base
 
-FROM node:${NODE_VERSION}-alpine as base
+# Install pnpm globally with caching to avoid reinstalling if nothing has changed
+RUN npm i -g pnpm
 
-ENV NODE_ENV=development
-
-# Build stage
-
-FROM base as build
-
-RUN npm install -g pnpm
-
-COPY --link producer/package.json producer/pnpm-lock.yaml home/app/
-
-COPY --link shared/package.json shared/pnpm-lock.yaml /home/shared/
-
+# Set the working directory
 WORKDIR /home/app
+
+# Copy only package-related files to leverage caching
+COPY --link ./scripts/package.json ./scripts/pnpm-lock.yaml ./scripts/
+COPY --link ./shared/package.json ./shared/pnpm-lock.yaml ./shared/
+COPY --link ./producer/package.json ./producer/pnpm-lock.yaml ./producer/
+
+# Install dependencies for each package
+WORKDIR /home/app/scripts
 RUN pnpm install --frozen-lockfile
 
-WORKDIR /home/shared
+WORKDIR /home/app/shared
 RUN pnpm install --frozen-lockfile
 
-COPY --link ../producer /home/app
+WORKDIR /home/app/producer
+RUN pnpm install --frozen-lockfile
 
-COPY --link ../shared /home/shared
-
+# Now copy the rest of the source files
 WORKDIR /home/app
 
-RUN pnpm run compile && pnpm run build
+COPY --link ../scripts ./scripts
+COPY --link ../shared ./shared
+COPY --link ../producer ./producer
 
-RUN pnpm prune
+# Build the producer
+WORKDIR /home/app/producer
 
-# Final stage
+RUN pnpm run build_all
 
-FROM base
-
-COPY --from=build /home/app /home/app
-
-WORKDIR /home/app
-
-EXPOSE ${PORT}
-
-CMD ["node", "dist/app/src/index.js"]
+# Start the application
+CMD ["node", "/home/app/producer/dist/producer/src/index.js"]

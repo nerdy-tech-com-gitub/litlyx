@@ -4,9 +4,9 @@ import type { MetricsCounts } from '~/server/api/metrics/[project_id]/counts';
 
 definePageMeta({ layout: 'dashboard' });
 
-const activeProject = useActiveProject();
+const { project } = useProject();
 
-const isPremium = computed(() => (activeProject.value?.premium_type || 0) > 0);
+const isPremium = computed(() => (project.value?.premium_type || 0) > 0);
 
 const metricsInfo = ref<number>(0);
 
@@ -28,13 +28,13 @@ const itemsPerPage = 50;
 const totalItems = computed(() => metricsInfo.value);
 
 
-const { data: tableData, pending: loadingData } = await useLazyFetch<any[]>(() =>
-    `/api/metrics/${activeProject.value?._id}/query?type=1&orderBy=${sort.value.column}&order=${sort.value.direction}&page=${page.value}&limit=${itemsPerPage}`, {
-    ...signHeaders(),
+const { data: tableData, pending: loadingData } = await useFetch<any[]>(() =>
+    `/api/metrics/${project.value?._id}/query?type=1&orderBy=${sort.value.column}&order=${sort.value.direction}&page=${page.value}&limit=${itemsPerPage}`, {
+    ...signHeaders(), lazy: true
 })
 
 onMounted(async () => {
-    const counts = await $fetch<MetricsCounts>(`/api/metrics/${activeProject.value?._id}/counts`, signHeaders());
+    const counts = await $fetch<MetricsCounts>(`/api/metrics/${project.value?._id}/counts`, signHeaders());
     metricsInfo.value = counts.eventsCount;
 });
 
@@ -42,12 +42,14 @@ const creatingCsv = ref<boolean>(false);
 
 async function downloadCSV() {
     creatingCsv.value = true;
-    const result = await $fetch(`/api/project/generate_csv?mode=events&slice=${options.indexOf(selectedTimeFrom.value)}`, signHeaders());
-    const blob = new Blob([result], { type: 'text/csv' });
+    const result = await $fetch(`/api/project/generate_csv?mode=events&slice=${options.indexOf(selectedTimeFrom.value)}`, {
+        headers: useComputedHeaders({ useSnapshotDates: false }).value
+    });
+    const blob = new Blob([result as any], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'ReportVisits.csv';
+    a.download = 'ReportEvents.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -93,11 +95,18 @@ function goToUpgrade() {
                 <div> It can take a few minutes </div>
             </div>
             <div class="w-[15rem] flex flex-col gap-0">
-                <USelectMenu v-model="selectedTimeFrom" :options="options"></USelectMenu>
+                <USelectMenu :uiMenu="{
+                    select: '!bg-lyx-widget-light !shadow-none focus:!ring-lyx-widget-lighter !ring-lyx-widget-lighter',
+                    base: '!bg-lyx-widget',
+                    option: {
+                        base: 'hover:!bg-lyx-widget-lighter cursor-pointer',
+                        active: '!bg-lyx-widget-lighter'
+                    }
+                }" v-model="selectedTimeFrom" :options="options"></USelectMenu>
             </div>
 
             <div v-if="isPremium" @click="downloadCSV()"
-                class="bg-[#57c78fc0] hover:bg-[#57c78fab] cursor-pointer text-text poppins font-semibold px-8 py-2 rounded-lg">
+                class="bg-[#57c78fc0] hover:bg-[#57c78fab] cursor-pointer text-text poppins font-semibold px-8 py-1 rounded-lg">
                 Download CSV
             </div>
 

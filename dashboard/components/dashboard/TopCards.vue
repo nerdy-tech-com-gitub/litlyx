@@ -3,51 +3,13 @@
 import DateService from '@services/DateService';
 import type { Slice } from '@services/DateService';
 
-const { data: metricsInfo } = useMetricsData();
-
 const { snapshot, safeSnapshotDates } = useSnapshot()
 
-const snapshotFrom = computed(() => new Date(snapshot.value?.from || '0').getTime());
-const snapshotTo = computed(() => new Date(snapshot.value?.to || Date.now()).getTime());
-
 const snapshotDays = computed(() => {
-    return (snapshotTo.value - snapshotFrom.value) / 1000 / 60 / 60 / 24;
+    const to = new Date(safeSnapshotDates.value.to).getTime();
+    const from = new Date(safeSnapshotDates.value.from).getTime();
+    return (to - from) / 1000 / 60 / 60 / 24;
 });
-
-const avgVisitDay = computed(() => {
-    if (!visitsData.data.value) return '0.00';
-    const counts = visitsData.data.value.data.reduce((a, e) => e + a, 0);
-    const avg = counts / Math.max(snapshotDays.value, 1);
-    return avg.toFixed(2);
-});
-
-const avgEventsDay = computed(() => {
-    if (!eventsData.data.value) return '0.00';
-    const counts = eventsData.data.value.data.reduce((a, e) => e + a, 0);
-    const avg = counts / Math.max(snapshotDays.value, 1);
-    return avg.toFixed(2);
-});
-
-const avgSessionsDay = computed(() => {
-    if (!sessionsData.data.value) return '0.00';
-    const counts = sessionsData.data.value.data.reduce((a, e) => e + a, 0);
-    const avg = counts / Math.max(snapshotDays.value, 1);
-    return avg.toFixed(2);
-});
-
-
-const avgSessionDuration = computed(() => {
-    if (!metricsInfo.value) return '0.00';
-    const avg = metricsInfo.value.avgSessionDuration;
-    let hours = 0;
-    let minutes = 0;
-    let seconds = 0;
-    seconds += avg * 60;
-    while (seconds > 60) { seconds -= 60; minutes += 1; }
-    while (minutes > 60) { minutes -= 60; hours += 1; }
-    return `${hours > 0 ? hours + 'h ' : ''}${minutes}m ${seconds.toFixed()}s`
-});
-
 
 const chartSlice = computed(() => {
     const snapshotSizeMs = new Date(snapshot.value.to).getTime() - new Date(snapshot.value.from).getTime();
@@ -59,52 +21,80 @@ const chartSlice = computed(() => {
 
 
 function transformResponse(input: { _id: string, count: number }[]) {
-    const data = input.map(e => e.count);
+
+    const data = input.map(e => e.count || 0);
+
     const labels = input.map(e => DateService.getChartLabelFromISO(e._id, navigator.language, chartSlice.value));
-    const pool = [...input.map(e => e.count)];
-    pool.pop();
+
+    const pool = [...input.map(e => e.count || 0)];
+
     const avg = pool.reduce((a, e) => a + e, 0) / pool.length;
-    const diffPercent: number = (100 / avg * (input.at(-1)?.count || 0)) - 100;
+
+    const targets = input.slice(Math.floor(input.length / 4 * 3));
+    const targetAvg = targets.reduce((a, e) => a + e.count, 0) / targets.length;
+
+    const diffPercent: number = (100 / avg * (targetAvg)) - 100;
+
     const trend = Math.max(Math.min(diffPercent, 99), -99);
+
     return { data, labels, trend }
+
 }
 
-const activeProject = useActiveProject();
-
-function getBody() {
-    return JSON.stringify({
-        from: safeSnapshotDates.value.from,
-        to: safeSnapshotDates.value.to,
-        slice: chartSlice.value
-    });
-}
-
-const visitsData = useFetch(`/api/metrics/${activeProject.value?._id}/timeline/visits`, {
-    method: 'POST', ...signHeaders({ v2: 'true' }), body: getBody(), transform: transformResponse,
-    lazy: true, immediate: false
+const visitsData = useFetch('/api/timeline/visits', {
+    headers: useComputedHeaders({ slice: chartSlice.value }), lazy: true, transform: transformResponse
+});
+const sessionsData = useFetch('/api/timeline/sessions', {
+    headers: useComputedHeaders({ slice: chartSlice.value }), lazy: true, transform: transformResponse
+});
+const sessionsDurationData = useFetch('/api/timeline/sessions_duration', {
+    headers: useComputedHeaders({ slice: chartSlice.value }), lazy: true, transform: transformResponse
+});
+const bouncingRateData = useFetch('/api/timeline/bouncing_rate', {
+    headers: useComputedHeaders({ slice: chartSlice.value }), lazy: true, transform: transformResponse
 });
 
-const eventsData = useFetch(`/api/metrics/${activeProject.value?._id}/timeline/events`, {
-    method: 'POST', ...signHeaders({ v2: 'true' }), body: getBody(), transform: transformResponse,
-    lazy: true, immediate: false
+const avgVisitDay = computed(() => {
+    if (!visitsData.data.value) return '0.00';
+    const counts = visitsData.data.value.data.reduce((a, e) => e + a, 0);
+    const avg = counts / Math.max(snapshotDays.value, 1);
+    return avg.toFixed(2);
 });
 
-const sessionsData = useFetch(`/api/metrics/${activeProject.value?._id}/timeline/sessions`, {
-    method: 'POST', ...signHeaders({ v2: 'true' }), body: getBody(), transform: transformResponse,
-    lazy: true, immediate: false
+const avgSessionsDay = computed(() => {
+    if (!sessionsData.data.value) return '0.00';
+    const counts = sessionsData.data.value.data.reduce((a, e) => e + a, 0);
+    const avg = counts / Math.max(snapshotDays.value, 1);
+    return avg.toFixed(2);
 });
 
-const sessionsDurationData = useFetch(`/api/metrics/${activeProject.value?._id}/timeline/sessions_duration`, {
-    method: 'POST', ...signHeaders({ v2: 'true' }), body: getBody(), transform: transformResponse,
-    lazy: true, immediate: false
-});
+const avgBouncingRate = computed(() => {
+    if (!bouncingRateData.data.value) return '0.00 %'
 
+    const counts = bouncingRateData.data.value.data
+        .filter(e => e > 0)
+        .reduce((a, e) => e + a, 0);
 
-onMounted(async () => {
-    visitsData.execute();
-    eventsData.execute();
-    sessionsData.execute();
-    sessionsDurationData.execute();
+    const avg = counts / Math.max(bouncingRateData.data.value.data.filter(e => e > 0).length, 1);
+    return avg.toFixed(2) + ' %';
+})
+
+const avgSessionDuration = computed(() => {
+    if (!sessionsDurationData.data.value) return '0.00 %'
+
+    const counts = sessionsDurationData.data.value.data
+        .filter(e => e > 0)
+        .reduce((a, e) => e + a, 0);
+
+    const avg = counts / Math.max(sessionsDurationData.data.value.data.filter(e => e > 0).length, 1);
+
+    let hours = 0;
+    let minutes = 0;
+    let seconds = 0;
+    seconds += avg * 60;
+    while (seconds > 60) { seconds -= 60; minutes += 1; }
+    while (minutes > 60) { minutes -= 60; hours += 1; }
+    return `${hours > 0 ? hours + 'h ' : ''}${minutes}m ${seconds.toFixed()}s`
 });
 
 
@@ -120,10 +110,9 @@ onMounted(async () => {
             :data="visitsData.data.value?.data" :labels="visitsData.data.value?.labels" color="#5655d7">
         </DashboardCountCard>
 
-        <DashboardCountCard :ready="!eventsData.pending.value" icon="far fa-flag" text="Total custom events"
-            :value="formatNumberK(eventsData.data.value?.data.reduce((a, e) => a + e, 0) || '...')"
-            :avg="formatNumberK(avgEventsDay) + '/day'" :trend="eventsData.data.value?.trend"
-            :data="eventsData.data.value?.data" :labels="eventsData.data.value?.labels" color="#1e9b86">
+        <DashboardCountCard :ready="!bouncingRateData.pending.value" icon="far fa-chart-user" text="Bouncing rate"
+            :value="avgBouncingRate" :trend="bouncingRateData.data.value?.trend" :slow="true"
+            :data="bouncingRateData.data.value?.data" :labels="bouncingRateData.data.value?.labels" color="#1e9b86">
         </DashboardCountCard>
 
 
@@ -134,8 +123,8 @@ onMounted(async () => {
         </DashboardCountCard>
 
 
-        <DashboardCountCard :ready="!sessionsDurationData.pending.value" icon="far fa-timer" text="Total avg session time"
-            :value="avgSessionDuration" :trend="sessionsDurationData.data.value?.trend"
+        <DashboardCountCard :ready="!sessionsDurationData.pending.value" icon="far fa-timer"
+            text="Total avg session time" :value="avgSessionDuration" :trend="sessionsDurationData.data.value?.trend"
             :data="sessionsDurationData.data.value?.data" :labels="sessionsDurationData.data.value?.labels"
             color="#f56523">
         </DashboardCountCard>

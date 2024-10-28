@@ -1,13 +1,11 @@
 <script lang="ts" setup>
 
-const activeProject = useActiveProject();
+const eventNames = await useFetch<string[]>(`/api/data/events_data/names`, {
+    headers: useComputedHeaders()
+});
 
-const eventNames = ref<string[]>([]);
 const selectedEventName = ref<string>();
 
-onMounted(async () => {
-    eventNames.value = await $fetch<string[]>(`/api/metrics/${activeProject.value?._id.toString()}/events/names`, signHeaders());
-});
 
 const userFlowData = ref<any>();
 const analyzing = ref<boolean>(false);
@@ -26,7 +24,10 @@ async function getUserFlowData() {
 
     const queryParamsString = Object.keys(queryParams).map((key) => `${key}=${queryParams[key]}`).join('&');
 
-    userFlowData.value = await $fetch(`/api/metrics/${activeProject.value?._id.toString()}/events/flow_from_name?${queryParamsString}`, signHeaders());
+    userFlowData.value = await $fetch(`/api/data/events_data/flow_from_name?${queryParamsString}`, {
+        headers: useComputedHeaders().value
+    });
+
     analyzing.value = false;
 }
 
@@ -38,25 +39,33 @@ async function analyzeEvent() {
 
 <template>
     <CardTitled title="Event User Flow"
-        sub="Track your user's journey from external links to in-app events, maintaining a complete view of their path from entry to engagement." class="w-full p-4">
+        sub="Track your user's journey from external links to in-app events, maintaining a complete view of their path from entry to engagement."
+        class="w-full p-4">
 
-        <div class="p-2 flex flex-col gap-3">
-            <USelectMenu searchable searchable-placeholder="Search an event..." class="w-full"
-                placeholder="Select an event" :options="eventNames" v-model="selectedEventName">
-            </USelectMenu>
-            <div v-if="selectedEventName && !analyzing" class="flex justify-center">
-                <div @click="analyzeEvent()"
-                    class="bg-bg w-fit px-8 py-2 poppins rounded-lg hover:bg-bg/80 cursor-pointer">
-                    Analyze
+        <div class="flex flex-col gap-4">
+
+            <div class="py-2 flex items-center gap-3">
+                <USelectMenu :uiMenu="{
+                    select: '!bg-lyx-widget-light !shadow-none focus:!ring-lyx-widget-lighter !ring-lyx-widget-lighter',
+                    base: '!bg-lyx-widget',
+                    option: {
+                        base: 'hover:!bg-lyx-widget-lighter cursor-pointer',
+                        active: '!bg-lyx-widget-lighter'
+                    }
+                }" searchable searchable-placeholder="Search an event..." class="w-full" placeholder="Select an event"
+                    :options="eventNames.data.value || []" v-model="selectedEventName">
+                </USelectMenu>
+                <div v-if="selectedEventName && !analyzing" class="flex justify-center">
+                    <LyxUiButton @click="analyzeEvent()" type="primary" class="w-fit px-8 py-1">
+                        Analyze
+                    </LyxUiButton>
                 </div>
             </div>
 
-            <div v-if="analyzing">
-                Analyzing...
-            </div>
+            <div v-if="analyzing"> Analyzing... </div>
 
             <div class="flex flex-col gap-2" v-if="userFlowData">
-                <div class="flex gap-4 items-center bg-bg py-1 px-2 rounded-lg"
+                <div class="flex gap-4 items-center bg-bg py-2 px-2 bg-lyx-widget-light rounded-lg"
                     v-for="(count, referrer) in userFlowData">
                     <div class="w-5 h-5 flex items-center justify-center">
                         <img :src="`https://s2.googleusercontent.com/s2/favicons?domain=${referrer}&sz=64`"
@@ -67,8 +76,8 @@ async function analyzeEvent() {
                     <div> {{ count.toFixed(2).replace('.', ',') }} % </div>
                 </div>
             </div>
-
         </div>
+
 
     </CardTitled>
 </template>

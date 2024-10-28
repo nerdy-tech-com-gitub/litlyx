@@ -6,17 +6,7 @@ import DateService, { type Slice } from '@services/DateService';
 const props = defineProps<{ slice: Slice }>();
 const slice = computed(() => props.slice);
 
-const activeProject = useActiveProject();
 const { safeSnapshotDates } = useSnapshot()
-
-const body = computed(() => {
-    return {
-        from: safeSnapshotDates.value.from,
-        to: safeSnapshotDates.value.to,
-        slice: slice.value,
-    }
-});
-
 
 function transformResponse(input: { _id: string, name: string, count: number }[]) {
 
@@ -24,10 +14,9 @@ function transformResponse(input: { _id: string, name: string, count: number }[]
         data: input,
         from: input[0]._id,
         to: safeSnapshotDates.value.to
-    }, slice.value, {
-        advanced: true,
-        advancedGroupKey: 'name'
-    });
+    },
+        slice.value,
+        { advanced: true, advancedGroupKey: 'name' });
 
     const parsedDatasets: any[] = [];
 
@@ -72,6 +61,7 @@ function transformResponse(input: { _id: string, name: string, count: number }[]
         datasets: parsedDatasets,
         labels: fixed.labels
     }
+
 }
 
 const errorData = ref<{ errored: boolean, text: string }>({
@@ -90,8 +80,10 @@ function onResponse(e: any) {
     if (e.response.status != 500) errorData.value = { errored: false, text: '' }
 }
 
-const eventsStackedData = useFetch(`/api/metrics/${activeProject.value?._id}/timeline/events_stacked`, {
-    method: 'POST', body, lazy: true, immediate: false, transform: transformResponse, ...signHeaders(),
+const eventsStackedData = useFetch(`/api/timeline/events_stacked`, {
+    lazy: true, immediate: false,
+    transform: transformResponse,
+    headers: useComputedHeaders({ slice }),
     onResponseError,
     onResponse
 });

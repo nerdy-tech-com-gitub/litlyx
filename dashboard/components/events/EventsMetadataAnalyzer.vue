@@ -1,16 +1,15 @@
 <script lang="ts" setup>
 
-const activeProject = useActiveProject();
 
-const eventNames = ref<string[]>([]);
+const eventNames = await useFetch<string[]>(`/api/data/events_data/names`, {
+    headers: useComputedHeaders()
+});
+
 const selectedEventName = ref<string>();
 const metadataFields = ref<string[]>([]);
 const selectedMetadataField = ref<string>();
 const metadataFieldGrouped = ref<any[]>([]);
 
-onMounted(async () => {
-    eventNames.value = await $fetch<string[]>(`/api/metrics/${activeProject.value?._id.toString()}/events/names`, signHeaders());
-});
 
 watch(selectedEventName, () => {
     getMetadataFields();
@@ -21,7 +20,9 @@ watch(selectedMetadataField, () => {
 });
 
 async function getMetadataFields() {
-    metadataFields.value = await $fetch<string[]>(`/api/metrics/${activeProject.value?._id.toString()}/events/metadata_fields?name=${selectedEventName.value}`, signHeaders());
+    metadataFields.value = await $fetch<string[]>(`/api/data/events_data/metadata_fields?name=${selectedEventName.value}`, {
+        headers: useComputedHeaders().value
+    });
     selectedMetadataField.value = undefined;
     currentSearchText.value = "";
 }
@@ -38,10 +39,12 @@ async function getMetadataFieldGrouped() {
         name: selectedEventName.value,
         field: selectedMetadataField.value
     }
-    
+
     const queryParamsString = Object.keys(queryParams).map((key) => `${key}=${queryParams[key]}`).join('&');
 
-    metadataFieldGrouped.value = await $fetch<string[]>(`/api/metrics/${activeProject.value?._id.toString()}/events/metadata_field_group?${queryParamsString}`, signHeaders());
+    metadataFieldGrouped.value = await $fetch<string[]>(`/api/data/events_data/metadata_field_group?${queryParamsString}`, {
+        headers: useComputedHeaders().value
+    });
 }
 
 
@@ -71,11 +74,80 @@ const canSearch = computed(() => {
 
     <CardTitled title="Event metadata analyzer" sub="Filter events metadata fields to analyze them" class="w-full p-4">
 
-        <div class="p-2 flex flex-col">
+        <div class="">
+
+            <LyxUiCard class="h-full w-full flex gap-2">
+
+                <div class="flex-[2]">
+                    <div class="flex flex-col gap-2">
+                        <USelectMenu :uiMenu="{
+                            select: '!bg-lyx-widget-light !shadow-none focus:!ring-lyx-widget-lighter !ring-lyx-widget-lighter',
+                            base: '!bg-lyx-widget',
+                            option: {
+                                base: 'hover:!bg-lyx-widget-lighter cursor-pointer',
+                                active: '!bg-lyx-widget-lighter'
+                            }
+                        }" searchable searchable-placeholder="Search an event..." class="w-full"
+                            placeholder="Select an event" :options="eventNames.data.value || []"
+                            v-model="selectedEventName">
+                        </USelectMenu>
+
+                        <USelectMenu :uiMenu="{
+                            select: '!bg-lyx-widget-light !shadow-none focus:!ring-lyx-widget-lighter !ring-lyx-widget-lighter',
+                            base: '!bg-lyx-widget',
+                            option: {
+                                base: 'hover:!bg-lyx-widget-lighter cursor-pointer',
+                                active: '!bg-lyx-widget-lighter'
+                            }
+                        }" searchable searchable-placeholder="Search a field..." class="w-full"
+                            placeholder="Select a field" :options="metadataFields" v-model="selectedMetadataField">
+                        </USelectMenu>
+                    </div>
+
+                    <div class="text-lyx-text-darker poppins mt-4 flex items-center gap-4">
+                        <div class="w-[10rem]">
+                            Search results: {{ metadataFieldGroupedFiltered.length }}
+                        </div>
+                        <div v-if="canSearch" class="h-full flex items-center text-[1.2rem]">
+
+                            <div class="bg-lyx-widget-light flex items-center rounded-md pl-4">
+                                <div><i class="far fa-search"></i></div>
+                                <input class="bg-transparent px-4 py-2 text-[1rem] outline-none" type="text"
+                                    placeholder="Filter by metadata name" v-model="currentSearchText">
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2 mt-4">
+
+                        <div class="bg-lyx-widget-light text-lyx-text-dark px-3 py-2 rounded-md w-fit"
+                            v-for="item of metadataFieldGroupedFiltered">
+                            <div class="flex gap-2">
+                                <div> {{ item._id || 'OLD_EVENTS' }} </div>
+                                <div> {{ item.count }} </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- <div class="border-solid border-[#212121] border-l-[1px]"></div> -->
+
+                <!-- <div class="flex-[1]">
+                    <div class="poppins font-semibold"> </div>
+                </div> -->
+
+            </LyxUiCard>
+
+        </div>
+
+        <!-- <div class="p-2 flex flex-col">
 
             <div class="flex flex-col gap-2">
                 <USelectMenu searchable searchable-placeholder="Search an event..." class="w-full"
-                    placeholder="Select an event" :options="eventNames" v-model="selectedEventName">
+                    placeholder="Select an event" :options="eventNames.data.value || []" v-model="selectedEventName">
                 </USelectMenu>
 
                 <USelectMenu v-if="metadataFields.length > 0" searchable searchable-placeholder="Search a field..."
@@ -100,17 +172,11 @@ const canSearch = computed(() => {
                     Search results: {{ metadataFieldGroupedFiltered.length }}
                 </div>
 
-                <div class="flex flex-col">
-                    <div v-for="item of metadataFieldGroupedFiltered">
-                        <div class="flex gap-2">
-                            <div> {{ item._id || 'OLD_EVENTS' }} </div>
-                            <div> {{ item.count }} </div>
-                        </div>
-                    </div>
-                </div>
+   
             </div>
 
-        </div>
+        </div> -->
+
     </CardTitled>
 
 

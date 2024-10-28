@@ -4,16 +4,8 @@ import type { PricingCardProp } from './PricingCardGeneric.vue';
 
 
 const { data: planData, refresh: refreshPlanData } = useFetch('/api/project/plan', {
-    ...signHeaders(),
-    lazy: true
+    lazy: true, headers: useComputedHeaders({ useSnapshotDates: false })
 });
-
-const activeProject = useActiveProject();
-
-watch(activeProject, () => {
-    refreshPlanData();
-});
-
 
 function getPricingsData() {
 
@@ -23,7 +15,7 @@ function getPricingsData() {
             price: '€0 / mo',
             subs: [
                 'Up to 5000 visits/events per month',
-                'CPM 0€ per visit/event'
+
             ],
             features: [
                 'Email support',
@@ -70,7 +62,7 @@ function getPricingsData() {
             price: '€4,99 / mo',
             subs: [
                 'Up to 50.000 visits/events per month',
-                'CPM 0,10€ per visit/event'
+                '0,00010€ per visit/event'
             ],
             features: [
                 'Slack support',
@@ -90,7 +82,7 @@ function getPricingsData() {
             price: '€9,99 / mo',
             subs: [
                 'Up to 150.000 visits/events per month',
-                'CPM 0,06€ per visit/event'
+                '0,00006€ per visit/event'
             ],
             features: [
                 'Slack support',
@@ -110,7 +102,7 @@ function getPricingsData() {
             price: '€29,99 / mo',
             subs: [
                 'Up to 500.000 visits/events per month',
-                'CPM 0,059€ per visit/event'
+                '0,000059€ per visit/event'
             ],
             features: [
                 'Slack support',
@@ -130,7 +122,7 @@ function getPricingsData() {
             price: '€59,99 / mo',
             subs: [
                 'Up to 1.000.000 visits/events per month',
-                'CPM 0,059€ per visit/event'
+                '0,000059€ per visit/event'
             ],
             features: [
                 'Slack support',
@@ -138,7 +130,7 @@ function getPricingsData() {
                 'Unlimited reports',
                 'AI Tokens: 5.000',
                 'Server type: SHARED',
-                'Data retention: 1 Year'
+                'Data retention: 3 Year'
             ],
             cta: 'Go to Cloud Dashboard',
             active: (planData.value?.premium_type || 0) == 104,
@@ -150,7 +142,7 @@ function getPricingsData() {
             price: '€99,99 / mo',
             subs: [
                 'Up to 2.500.000 visits/events per month',
-                'CPM 0,039€ per visit/event'
+                '0,000039€ per visit/event'
             ],
             features: [
                 'Slack support',
@@ -158,7 +150,7 @@ function getPricingsData() {
                 'Unlimited reports',
                 'AI Tokens: 10.000',
                 'Server type: DEDICATED',
-                'Data retention: 2 Years'
+                'Data retention: 7 Years'
             ],
             cta: 'Go to Cloud Dashboard',
             active: (planData.value?.premium_type || 0) == 105,
@@ -170,7 +162,7 @@ function getPricingsData() {
             price: '€149,99 / mo',
             subs: [
                 'Up to 5.000.000 visits/events per month',
-                'CPM 0,029€ per visit/event'
+                '0,000029€ per visit/event'
             ],
             features: [
                 'Slack support',
@@ -178,7 +170,7 @@ function getPricingsData() {
                 'Unlimited reports',
                 'AI Tokens: 20.000',
                 'Server type: DEDICATED',
-                'Data retention: 3 Years'
+                'Data retention: 8 Years'
             ],
             cta: 'Go to Cloud Dashboard',
             active: (planData.value?.premium_type || 0) == 106,
@@ -190,15 +182,18 @@ function getPricingsData() {
     return { freePricing, customPricing, slidePricings }
 }
 
-
+const { projectId } = useProject();
 
 const emits = defineEmits<{
     (evt: 'onCloseClick'): void
 }>();
 
 async function onLifetimeUpgradeClick() {
-    const res = await $fetch<string>(`/api/pay/${activeProject.value?._id.toString()}/create-onetime`, {
-        ...signHeaders({ 'content-type': 'application/json' }),
+    const res = await $fetch<string>(`/api/pay/create-onetime`, {
+        ...signHeaders({
+            'content-type': 'application/json',
+            'x-pid': projectId.value ?? ''
+        }),
         method: 'POST',
         body: JSON.stringify({ planId: 2001 })
     })
@@ -218,11 +213,12 @@ async function onLifetimeUpgradeClick() {
 
         <div class="flex gap-8 mt-10 h-max xl:flex-row flex-col">
             <PricingCardGeneric class="flex-1" :datas="getPricingsData().freePricing"></PricingCardGeneric>
-            <PricingCardGeneric class="flex-1" :datas="getPricingsData().slidePricings" :default-index="2"></PricingCardGeneric>
+            <PricingCardGeneric class="flex-1" :datas="getPricingsData().slidePricings" :default-index="2">
+            </PricingCardGeneric>
             <PricingCardGeneric class="flex-1" :datas="getPricingsData().customPricing"></PricingCardGeneric>
         </div>
 
-        <LyxUiCard class="w-full mt-6">
+        <!-- <LyxUiCard class="w-full mt-6">
             <div class="flex">
                 <div class="flex flex-col gap-3">
                     <div>
@@ -266,7 +262,7 @@ async function onLifetimeUpgradeClick() {
                     </div>
                 </div>
             </div>
-        </LyxUiCard>
+        </LyxUiCard> -->
 
         <div class="flex justify-between items-center mt-10 flex-col xl:flex-row">
             <div class="flex flex-col gap-2">
@@ -278,7 +274,7 @@ async function onLifetimeUpgradeClick() {
                 </div>
             </div>
             <div class="mt-2">
-                <div class="rounded-lg px-10 py-3 bg-[#303030]">
+                <div class="rounded-lg px-10 py-3 bg-[#151515]">
                     <a href="mailto:help@litlyx.com" class="poppins text-[1.3rem]">
                         help@litlyx.com
                     </a>

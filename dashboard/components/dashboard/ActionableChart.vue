@@ -3,12 +3,8 @@ import { onMounted } from 'vue';
 import DateService, { type Slice } from '@services/DateService';
 import type { ChartData, ChartOptions, TooltipModel } from 'chart.js';
 import { useLineChart, LineChart } from 'vue-chart-3';
-registerChartComponents();
 
-const errorData = ref<{ errored: boolean, text: string }>({
-    errored: false,
-    text: ''
-})
+const errorData = ref<{ errored: boolean, text: string }>({ errored: false, text: '' })
 
 const chartOptions = ref<ChartOptions<'line'>>({
     responsive: true,
@@ -102,7 +98,6 @@ const chartData = ref<ChartData<'line' | 'bar' | 'bubble'>>({
     ],
 });
 
-
 const { lineChartProps, lineChartRef, update: updateChart } = useLineChart({ chartData: (chartData as any), options: chartOptions });
 
 const externalTooltipElement = ref<null | HTMLDivElement>(null);
@@ -123,28 +118,29 @@ function externalTooltipHandler(context: { chart: any, tooltip: TooltipModel<'li
         return;
     }
     const { left: positionX, top: positionY } = chart.canvas.getBoundingClientRect();
+
+
+    const xSwap = tooltip.caretX > (window.innerWidth * 0.5) ? -450 : -100;
+
     tooltipEl.style.opacity = '1';
-    tooltipEl.style.left = positionX + tooltip.caretX + 'px';
+
+    tooltipEl.style.left = positionX + (tooltip.caretX + xSwap) + 'px';
+
     tooltipEl.style.top = positionY + tooltip.caretY + 'px';
     tooltipEl.style.padding = tooltip.options.padding + 'px ' + tooltip.options.padding + 'px';
 
 }
-
-
 const selectLabels: { label: string, value: Slice }[] = [
     { label: 'Hour', value: 'hour' },
     { label: 'Day', value: 'day' },
     { label: 'Month', value: 'month' },
 ];
 
+const selectedSlice = computed(() => selectLabels[selectedLabelIndex.value].value);
+
 const selectedLabelIndex = ref<number>(1);
-
-
-const activeProject = useActiveProject();
-
-const { safeSnapshotDates } = useSnapshot()
-
 const allDatesFull = ref<string[]>([]);
+
 
 function transformResponse(input: { _id: string, count: number }[]) {
     const data = input.map(e => e.count);
@@ -153,50 +149,31 @@ function transformResponse(input: { _id: string, count: number }[]) {
     return { data, labels }
 }
 
-const body = computed(() => {
-    return {
-        from: safeSnapshotDates.value.from,
-        to: safeSnapshotDates.value.to,
-        slice: selectLabels[selectedLabelIndex.value].value
-    }
-});
-
-
 function onResponseError(e: any) {
-    console.log('ON RESPONSE ERROR')
     errorData.value = { errored: true, text: e.response._data.message ?? 'Generic error' }
 }
 
 function onResponse(e: any) {
-    console.log('ON RESPONSE')
     if (e.response.status != 500) errorData.value = { errored: false, text: '' }
 }
 
-const visitsData = useFetch(`/api/metrics/${activeProject.value?._id}/timeline/visits`, {
-    method: 'POST', ...signHeaders({ v2: 'true' }), body, transform: transformResponse,
-    lazy: true, immediate: false,
-    onResponseError,
-    onResponse
+
+const visitsData = useFetch('/api/timeline/visits', {
+    headers: useComputedHeaders({ slice: selectedSlice }), lazy: true,
+    transform: transformResponse, onResponseError, onResponse
 });
 
-const eventsData = useFetch(`/api/metrics/${activeProject.value?._id}/timeline/events`, {
-    method: 'POST', ...signHeaders({ v2: 'true' }), body, transform: transformResponse,
-    lazy: true, immediate: false,
-    onResponseError,
-    onResponse
+const sessionsData = useFetch('/api/timeline/sessions', {
+    headers: useComputedHeaders({ slice: selectedSlice }), lazy: true,
+    transform: transformResponse, onResponseError, onResponse
 });
 
-const sessionsData = useFetch(`/api/metrics/${activeProject.value?._id}/timeline/sessions`, {
-    method: 'POST', ...signHeaders({ v2: 'true' }), body, transform: transformResponse,
-    lazy: true, immediate: false,
-    onResponseError,
-    onResponse
+const eventsData = useFetch('/api/timeline/events', {
+    headers: useComputedHeaders({ slice: selectedSlice }), lazy: true,
+    transform: transformResponse, onResponseError, onResponse
 });
 
-
-const readyToDisplay = computed(() => {
-    return !visitsData.pending.value && !eventsData.pending.value && !sessionsData.pending.value;
-});
+const readyToDisplay = computed(() => !visitsData.pending.value && !eventsData.pending.value && !sessionsData.pending.value);
 
 watch(readyToDisplay, () => {
     if (readyToDisplay.value === true) onDataReady();
@@ -220,13 +197,9 @@ function createGradient(startColor: string) {
 }
 
 function onDataReady() {
-    console.log('DATA READY');
-
     if (!visitsData.data.value) return;
     if (!eventsData.data.value) return;
     if (!sessionsData.data.value) return;
-
-    console.log('DATA READY 2');
 
     chartData.value.labels = visitsData.data.value.labels;
 
@@ -244,9 +217,7 @@ function onDataReady() {
     chartData.value.datasets[1].backgroundColor = [createGradient('#4abde8')];
     chartData.value.datasets[2].backgroundColor = [createGradient('#fbbf24')];
 
-    console.log('UPDATE CHART');
     updateChart();
-
 }
 
 const currentTooltipData = ref<{ visits: number, events: number, sessions: number, date: string }>({
@@ -262,21 +233,13 @@ function onLegendChange(dataset: any, index: number, checked: any) {
     dataset.hidden = !checked;
 }
 
-const legendColors = [
-    '#5655d7',
-    '#4abde8',
-    '#fbbf24'
-]
+const legendColors = ref<string[]>(['#5655d7', '#4abde8', '#fbbf24'])
+const legendClasses = ref<string[]>([
+    'actionable-visits-color-checkbox',
+    'actionable-sessions-color-checkbox',
+    'actionable-events-color-checkbox'
+])
 
-
-onMounted(async () => {
-    visitsData.execute();
-    eventsData.execute();
-    sessionsData.execute();
-});
-
-
-const inLiveDemo = isLiveDemo();
 
 </script>
 
@@ -289,7 +252,7 @@ const inLiveDemo = isLiveDemo();
         </template>
 
         <div class="flex gap-6 w-full justify-between">
-            <LyxUiButton type="secondary" :to="inLiveDemo ? '#' : '/analyst'" :disabled="inLiveDemo">
+            <LyxUiButton type="secondary" :to="isLiveDemo ? '#' : '/analyst'" :disabled="isLiveDemo">
                 <div class="flex items-center gap-2 px-10">
                     <i class="far fa-sparkles text-yellow-400"></i>
                     <div class="poppins text-lyx-text"> Ask AI </div>
@@ -297,9 +260,11 @@ const inLiveDemo = isLiveDemo();
             </LyxUiButton>
             <div class="flex gap-6">
                 <div v-for="(dataset, index) of chartData.datasets" class="flex gap-2 items-center text-[.9rem]">
+
                     <UCheckbox :ui="{
-                        color: `text-[${legendColors[index]}]`
+                        color: legendClasses[index]
                     }" :model-value="true" @change="onLegendChange(dataset, index, $event)"></UCheckbox>
+
                     <label class="mt-[2px]"> {{ dataset.label }} </label>
                 </div>
             </div>

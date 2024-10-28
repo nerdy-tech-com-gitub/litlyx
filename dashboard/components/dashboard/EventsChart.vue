@@ -77,7 +77,7 @@ const chartData = ref<ChartData<'doughnut'>>({
 
 const { doughnutChartProps, doughnutChartRef } = useDoughnutChart({ chartData: chartData, options: chartOptions });
 
-const activeProjectId = useActiveProjectId();
+const { projectId } = useProject();
 
 const { safeSnapshotDates } = useSnapshot();
 
@@ -98,19 +98,8 @@ function transformResponse(input: CustomEventsAggregated[]) {
     }
 }
 
-const headers = computed(() => {
-    return {
-        'x-from': safeSnapshotDates.value.from,
-        'x-to': safeSnapshotDates.value.to,
-        'Authorization': authorizationHeaderComputed.value,
-        'x-schema': 'events',
-        'x-limit': "6",
-        'x-pid': activeProjectId.data.value || ''
-    }
-});
-
-const eventsData = useFetch(`/api/data/query`, {
-    method: 'POST', headers, lazy: true, immediate: false, transform: transformResponse
+const eventsData = useFetch(`/api/data/events`, {
+     headers: useComputedHeaders({ limit: 6 }), lazy: true, immediate: false, transform: transformResponse
 });
 
 onMounted(() => {
