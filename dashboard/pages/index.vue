@@ -35,7 +35,7 @@ const showDashboard = computed(() => project.value && firstInteraction.data.valu
 
 <template>
 
-    <div class="dashboard w-full h-full overflow-y-auto pb-20 md:pt-4 lg:pt-0">
+    <div class="dashboard w-full h-full overflow-y-auto overflow-x-hidden pb-[7rem] md:pt-4 lg:pt-0">
 
         <div v-if="showDashboard">
 
@@ -56,21 +56,10 @@ const showDashboard = computed(() => project.value && firstInteraction.data.valu
             <div class="flex w-full justify-center mt-6 px-6">
                 <div class="flex w-full gap-6 flex-col xl:flex-row">
                     <div class="flex-1">
-                        <BarCardWebsites :key="refreshKey"></BarCardWebsites>
-                    </div>
-                    <div class="flex-1">
                         <BarCardReferrers :key="refreshKey"></BarCardReferrers>
                     </div>
-                </div>
-            </div>
-
-            <div class="flex w-full justify-center mt-6 px-6">
-                <div class="flex w-full gap-6 flex-col xl:flex-row">
                     <div class="flex-1">
-                        <BarCardBrowsers :key="refreshKey"></BarCardBrowsers>
-                    </div>
-                    <div class="flex-1">
-                        <BarCardOperatingSystems :key="refreshKey"></BarCardOperatingSystems>
+                        <BarCardWebsites :key="refreshKey"></BarCardWebsites>
                     </div>
                 </div>
             </div>
@@ -86,6 +75,17 @@ const showDashboard = computed(() => project.value && firstInteraction.data.valu
                 </div>
             </div>
 
+            <div class="flex w-full justify-center mt-6 px-6">
+                <div class="flex w-full gap-6 flex-col xl:flex-row">
+                    <div class="flex-1">
+                        <BarCardBrowsers :key="refreshKey"></BarCardBrowsers>
+                    </div>
+                    <div class="flex-1">
+                        <BarCardOperatingSystems :key="refreshKey"></BarCardOperatingSystems>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
 
@@ -97,8 +97,11 @@ const showDashboard = computed(() => project.value && firstInteraction.data.valu
             Create your first project...
         </div>
 
-        <div v-if="justLogged" class="text-[2rem]">
-            The page will refresh soon
+        <div v-if="justLogged" class="text-[2rem] w-full h-full flex items-center justify-center">
+            <div
+                class="backdrop-blur-[1px] z-[20] left-0 top-0 w-full h-full flex items-center justify-center font-bold rockmann absolute">
+                <i class="fas fa-spinner text-[2rem] text-[#727272] animate-[spin_1s_linear_infinite] duration-500"></i>
+            </div>
         </div>
 
     </div>

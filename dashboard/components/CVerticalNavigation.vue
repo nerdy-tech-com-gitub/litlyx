@@ -56,7 +56,7 @@ const { createAlert } = useAlert()
 async function deleteSnapshot(close: () => any) {
     await $fetch("/api/snapshot/delete", {
         method: 'DELETE',
-        ...signHeaders({ 'Content-Type': 'application/json' }),
+        headers: useComputedHeaders({ useSnapshotDates: false }).value,
         body: JSON.stringify({
             id: snapshot.value._id.toString(),
         })
@@ -71,11 +71,7 @@ async function generatePDF() {
 
     try {
         const res = await $fetch<Blob>('/api/project/generate_pdf', {
-            ...signHeaders({
-                'x-snapshot-name': snapshot.value.name,
-                'x-from': snapshot.value.from.toISOString(),
-                'x-to': snapshot.value.to.toISOString(),
-            }),
+            headers: useComputedHeaders({ useSnapshotDates: false, custom: { 'x-snapshot-name': snapshot.value.name } }).value,
             responseType: 'blob'
         });
 
@@ -144,10 +140,19 @@ const pricingDrawer = usePricingDrawer();
                 <LyxUiButton to="/project_creation" v-if="projectList && (projectList.length < (maxProjects || 1))"
                     type="outlined" class="w-full py-1 mt-2 text-[.8rem]">
                     <div class="flex items-center gap-2 justify-center">
-                        <div><i class="fas fa-plus"></i></div>
-                        <div> Create new project </div>
+                        <div><i class="fas fa-plus text-[.7rem]"></i></div>
+                        <div class="poppins"> New Project </div>
                     </div>
                 </LyxUiButton>
+
+                <LyxUiButton v-if="projectList && (projectList.length >= (maxProjects || 1))" type="outlined"
+                    class="w-full py-1 mt-2 text-[.7rem]">
+                    <div class="flex items-center gap-2 justify-center">
+                        <div><i class="text-lyx-text-darker far fa-lock"></i></div>
+                        <div class="text-lyx-text-darker"> Projects limit reached </div>
+                    </div>
+                </LyxUiButton>
+
 
             </div>
 
@@ -203,12 +208,12 @@ const pricingDrawer = usePricingDrawer();
                 <div v-if="snapshot" class="flex flex-col text-[.7rem] mt-2">
                     <div class="flex gap-1 items-center justify-center text-lyx-text-dark">
                         <div class="poppins">
-                            {{ new Date(snapshot.from).toLocaleString('it-IT').split(',')[0].trim().replace(/\//g, '-')
+                            {{ new Date(snapshot.from).toLocaleString().split(',')[0].trim()
                             }}
                         </div>
                         <div class="poppins"> to </div>
                         <div class="poppins">
-                            {{ new Date(snapshot.to).toLocaleString('it-IT').split(',')[0].trim().replace(/\//g, '-') }}
+                            {{ new Date(snapshot.to).toLocaleString().split(',')[0].trim() }}
                         </div>
                     </div>
 
@@ -243,7 +248,7 @@ const pricingDrawer = usePricingDrawer();
 
                     <div v-for="entry of section.entries" :class="{ 'grow flex items-end': entry.grow }">
 
-                        <div v-if="(!entry.adminOnly || (userRoles.isAdmin && !isAdminHidden))"
+                        <div v-if="(!entry.adminOnly || (userRoles.isAdmin.value && !isAdminHidden))"
                             class="bg-lyx-background w-full cursor-pointer text-lyx-text-dark py-[.35rem] px-2 rounded-lg text-[.95rem] flex items-center"
                             :class="{
                                 '!text-lyx-text-darker pointer-events-none': entry.disabled,
@@ -259,7 +264,7 @@ const pricingDrawer = usePricingDrawer();
                                 <div class="manrope grow">
                                     {{ entry.label }}
                                 </div>
-                                <div v-if="entry.premiumOnly && !userRoles.isPremium" class="flex items-center">
+                                <div v-if="entry.premiumOnly && !userRoles.isPremium.value" class="flex items-center">
                                     <i class="fal fa-lock"></i>
                                 </div>
                             </NuxtLink>
@@ -293,7 +298,8 @@ const pricingDrawer = usePricingDrawer();
                             class="cursor-pointer hover:text-lyx-text text-lyx-text-dark">
                             <i class="fab fa-dev"></i>
                         </NuxtLink> -->
-                        <NuxtLink to="/admin" v-if="userRoles.isAdmin"
+
+                        <NuxtLink to="/admin" v-if="userRoles.isAdmin.value"
                             class="cursor-pointer hover:text-lyx-text text-lyx-text-dark">
                             <i class="fas fa-cat"></i>
                         </NuxtLink>

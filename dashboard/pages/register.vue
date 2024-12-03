@@ -2,6 +2,7 @@
 
 definePageMeta({ layout: 'none' });
 
+import { Lit } from 'litlyx-js';
 
 const emailSended = ref<boolean>(false);
 
@@ -29,6 +30,9 @@ async function registerAccount() {
             body: JSON.stringify({ email: email.value, password: password.value })
         });
         if (res.error === true) return alert(res.message);
+
+        Lit.event('email_signup');
+
         emailSended.value = true;
     } catch (ex) {
         alert('Something went wrong');
@@ -45,7 +49,7 @@ async function registerAccount() {
 
         <div class="flex h-full">
 
-            <div class="flex-1 flex flex-col items-center pt-20 lg:pt-[22vh]">
+            <div class="flex-1 flex flex-col items-center pt-20 xl:pt-[22vh]">
 
                 <div class="rotating-thing absolute top-0"></div>
 
@@ -57,9 +61,8 @@ async function registerAccount() {
                     Sign up
                 </div>
 
-                <div class="text-text/80 text-[1.2rem] text-center w-[70%] poppins mt-2">
+                <div class="text-text/80 text-[1.2rem] font-light text-center w-[70%] poppins mt-2">
                     Track web analytics and custom events
-                    <br>
                     with extreme simplicity in under 30 sec.
                     <br>
                     <!-- <div class="font-bold poppins mt-4">
@@ -114,7 +117,8 @@ async function registerAccount() {
                     </RouterLink>
                 </div>
 
-                <div v-if="!emailSended" class="text-[.9rem] poppins mt-20 text-text-sub text-center relative z-[2]">
+                <div v-if="!emailSended"
+                    class="text-[.9rem] poppins mt-5 xl:mt-20 text-text-sub text-center relative z-[2]">
                     By continuing you are accepting
                     <br>
                     our

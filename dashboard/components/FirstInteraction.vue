@@ -7,6 +7,8 @@ import 'highlight.js/styles/stackoverflow-dark.css';
 import hljs from 'highlight.js';
 import CardTitled from './CardTitled.vue';
 
+import { Lit } from 'litlyx-js';
+
 const props = defineProps<{
     firstInteraction: boolean,
     refreshInteraction: () => any
@@ -19,6 +21,7 @@ onMounted(() => {
 function copyProjectId() {
     if (!navigator.clipboard) alert('You can\'t copy in HTTP');
     navigator.clipboard.writeText(project.value?._id?.toString() || '');
+    Lit.event('no_visit_copy_id');
     createAlert('Success', 'Project id copied successfully.', 'far fa-circle-check', 5000);
 }
 
@@ -36,6 +39,7 @@ function copyScript() {
         ].join('')
     }
 
+    Lit.event('no_visit_copy_script');
     navigator.clipboard.writeText(createScriptText());
     createAlert('Success', 'Script copied successfully.', 'far fa-circle-check', 5000);
 }
@@ -53,6 +57,7 @@ const scriptText = computed(() => {
 function reloadPage() {
     location.reload();
 }
+
 </script>
 
 <template>
@@ -76,26 +81,32 @@ function reloadPage() {
 
         <div class="flex items-center justify-center mt-10">
             <div class="flex flex-col gap-6">
-                <div class="flex gap-6">
-                    <div>
-                        <CardTitled class="h-full" title="Tutorial" sub="Coming soon. For now enjoy our launch video.">
-                            <div class="flex items-center justify-center h-full">
-                                <iframe width="560" height="315"
-                                    src="https://www.youtube.com/embed/GntyWMR7jsY?si=YGGkQwrk6-Iqmn8w" title="Litlyx"
+
+                <div class="flex gap-6 xl:flex-row flex-col">
+
+                    <div class="h-full w-full">
+                        <CardTitled class="h-full w-full xl:min-w-[500px]" title="Quick setup tutorial"
+                            sub="Quickly Set Up Litlyx in 30 Seconds!">
+
+                            <div class="flex items-center justify-center h-full w-full">
+
+                                <iframe class="w-full h-full min-h-[400px]"
+                                    src="https://www.youtube.com/embed/LInFoNLJ-CI?si=a97HVXpXFDgFg2Yp" title="Litlyx"
                                     frameborder="0"
                                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                                     referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
                             </div>
+
                         </CardTitled>
                     </div>
 
                     <div class="flex flex-col gap-6">
 
-                        <div>
+                        <div class="w-full">
                             <CardTitled title="Quick Integration"
                                 sub="Start tracking web analytics in one line. (works everywhere js is supported)">
                                 <div class="flex flex-col items-end gap-4">
-                                    <div class="w-full">
+                                    <div class="w-full xl:text-[1rem] text-[.8rem]">
                                         <pre><code class="language-html">{{ scriptText }}</code></pre>
                                     </div>
                                     <LyxUiButton type="secondary" @click="copyScript()">
@@ -122,7 +133,7 @@ function reloadPage() {
                         <CardTitled class="w-full h-full" title="Documentation"
                             sub="Learn how to use Litlyx in every tech stack">
                             <div class="flex flex-col items-end">
-                                <div class="flex justify-center w-full">
+                                <div class="justify-center w-full hidden xl:flex">
                                     <svg width="680" height="100" viewBox="0 0 680 100" fill="none"
                                         xmlns="http://www.w3.org/2000/svg">
                                         <mask id="path-1-inside-1_473_1361" fill="white">
@@ -250,7 +261,9 @@ function reloadPage() {
                                         </defs>
                                     </svg>
                                 </div>
-                                <LyxUiButton type="secondary" to="https://docs.litlyx.com"> Visit documentation
+                                <LyxUiButton @click="Lit.event('no_visit_goto_docs')" type="secondary"
+                                    to="https://docs.litlyx.com">
+                                    Visit documentation
                                 </LyxUiButton>
                             </div>
                         </CardTitled>
@@ -263,7 +276,7 @@ function reloadPage() {
 
 
 
-        <!-- <div class="flex justify-center gap-10 flex-col lg:flex-row items-center lg:items-stretch px-10">
+        <!-- <div class="flex justify-center gap-10 flex-col xl:flex-row items-center xl:items-stretch px-10">
 
             <div class="bg-menu p-6 rounded-xl flex flex-col gap-2 w-full">
                 <div class="poppins font-semibold"> Copy your project_id: </div>
@@ -273,7 +286,7 @@ function reloadPage() {
                 </div>
             </div>
 
-            <div class="bg-menu p-6 rounded-xl flex flex-col gap-2 w-full lg:max-w-[40vw]">
+            <div class="bg-menu p-6 rounded-xl flex flex-col gap-2 w-full xl:max-w-[40vw]">
                 <div class="poppins font-semibold">
                     Start logging visits in 1 click | Plug anywhere !
                 </div>
