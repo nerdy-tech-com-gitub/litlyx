@@ -1,6 +1,6 @@
 {
 	"dependencies": {
-		"@getbrevo/brevo": "^2.2.0",
+		"@getbrevo/brevo": "^3.0.1",
 		"dayjs": "^1.11.11",
 		"mongoose": "^8.4.0",
 		"redis": "^4.6.14"
