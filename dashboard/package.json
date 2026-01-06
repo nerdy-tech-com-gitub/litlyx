@@ -14,7 +14,7 @@
     "docker-run": "docker run -p 3000:3000 litlyx-dashboard"
   },
   "dependencies": {
-    "@getbrevo/brevo": "^2.2.0",
+    "@getbrevo/brevo": "^3.0.1",
     "@nuxtjs/tailwindcss": "^6.12.0",
     "@supabase/supabase-js": "^2.45.4",
     "chart.js": "^3.9.1",
